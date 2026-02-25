@@ -136,6 +136,63 @@ body {
 .header-controls {
   display: flex;
   align-items: center;
+  gap: 1.5rem;
+}
+
+/* Date Filters */
+.date-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.glass-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  outline: none;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.glass-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.glass-input option {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+.date-select {
+  min-width: 160px;
+}
+
+.custom-date-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.date-separator {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.date-input {
+  color-scheme: dark;
 }
 
 .dashboard-logo {
