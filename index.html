@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Performance - Autta.IA</title>
+    <meta
+      name="description"
+      content="Dashboard em tempo real de disparos e performance das automações n8n."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  </head>
+  <body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+      <div class="glass-card login-card">
+        <img src="./logo.png" alt="Autta.IA Logo" class="login-logo" onerror="this.src='https://via.placeholder.com/150x50/0f111a/ffffff?text=Autta.IA'" />
+        <h2>Dashboard Access</h2>
+        <p>Informe as suas credenciais para continuar</p>
+        
+        <form id="login-form">
+          <div class="input-group">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" placeholder="Digite seu usuário" required autocomplete="username">
+          </div>
+          <div class="input-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" placeholder="Digite sua senha" required autocomplete="current-password">
+          </div>
+          <div id="login-error" class="login-error hidden">Credenciais inválidas!</div>
+          <button type="submit" class="login-btn">Acessar Dashboard</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Dashboard Application -->
+    <div class="dashboard-container" id="dashboard-app" style="display: none;">
+      <header class="dashboard-header">
+        <div class="header-main">
+          <img src="./logo.png" alt="Autta.IA Logo" class="dashboard-logo" onerror="this.src='https://via.placeholder.com/150x50/0f111a/ffffff?text=Autta.IA'" />
+          <div class="header-titles">
+            <h1>Performance de Disparos</h1>
+            <p>Métricas em tempo real via Autta.IA</p>
+          </div>
+        </div>
+        <div class="header-controls">
+          <div class="status-indicator">
+            <span class="pulse-dot"></span>
+            <span>Live Data</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="kpi-grid">
+        <!-- Card 1: E-mails Enviados -->
+        <div class="glass-card kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">E-mails Enviados</span>
+            <i class="ph ph-envelope-simple"></i>
+          </div>
+          <div class="kpi-value" id="kpi-sent">-</div>
+          <div class="kpi-trend">
+            <i class="ph ph-trend-up"></i>
+            <span>Base: data_lead</span>
+          </div>
+        </div>
+
+        <!-- Card 2: E-mails Abertos -->
+        <div class="glass-card kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">E-mails Abertos</span>
+            <i class="ph ph-envelope-open"></i>
+          </div>
+          <div class="kpi-value" id="kpi-opened">-</div>
+          <div class="kpi-trend">
+            <i class="ph ph-trend-up"></i>
+            <span>Base: data_lead / opened</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Disparos Realizados -->
+        <div class="glass-card kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Disparos Realizados</span>
+            <i class="ph ph-paper-plane-right"></i>
+          </div>
+          <div class="kpi-value" id="kpi-disparos">-</div>
+          <div class="kpi-trend">
+            <i class="ph ph-trend-up"></i>
+            <span>Base: disparos</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Respostas (Leads) -->
+        <div class="glass-card kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Respostas (Leads)</span>
+            <i class="ph ph-chat-centered-text"></i>
+          </div>
+          <div class="kpi-value" id="kpi-responses">-</div>
+          <div class="kpi-trend highlight-trend">
+            <i class="ph ph-fire"></i>
+            <span>Interações geradas</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chart Section -->
+      <section class="glass-card chart-container">
+        <div class="chart-header">
+          <h2>Tendência (Últimos 7 dias)</h2>
+          <span class="subtitle">Disparos vs. Respostas</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <footer class="dashboard-footer">
+      <p>© Todos os direitos reservados Autta.IA</p>
+    </footer>
+
+    <!-- App Logic -->
+    <script src="./app.js"></script>
+  </body>
+</html>
