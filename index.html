@@ -62,6 +62,20 @@
           </div>
         </div>
         <div class="header-controls">
+          <div class="date-filters">
+            <select id="date-preset" class="glass-input date-select">
+              <option value="7d" selected>Últimos 7 dias</option>
+              <option value="30d">Últimos 30 dias</option>
+              <option value="thisMonth">Este Mês</option>
+              <option value="all">Todo o Período</option>
+              <option value="custom">Personalizado</option>
+            </select>
+            <div id="custom-date-group" class="custom-date-group" style="display: none;">
+              <input type="date" id="date-start" class="glass-input date-input" />
+              <span class="date-separator">até</span>
+              <input type="date" id="date-end" class="glass-input date-input" />
+            </div>
+          </div>
           <div class="status-indicator">
             <span class="pulse-dot"></span>
             <span>Live Data</span>
