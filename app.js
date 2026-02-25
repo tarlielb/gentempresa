@@ -52,6 +52,78 @@ document.addEventListener("DOMContentLoaded", async () => {
   const elDisparos = document.getElementById("kpi-disparos");
   const elResponses = document.getElementById("kpi-responses");
 
+  // Filter Elements
+  const presetSelect = document.getElementById("date-preset");
+  const customDateGroup = document.getElementById("custom-date-group");
+  const dateStartInput = document.getElementById("date-start");
+  const dateEndInput = document.getElementById("date-end");
+
+  // Helper: Get Date Range based on selected filter
+  function getDateRange() {
+    const preset = presetSelect.value;
+    const now = new Date();
+    let startDate = null;
+    let endDate = now.toISOString();
+
+    if (preset === "7d") {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      startDate = d.toISOString();
+    } else if (preset === "30d") {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      startDate = d.toISOString();
+    } else if (preset === "thisMonth") {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = d.toISOString();
+    } else if (preset === "custom") {
+      if (dateStartInput.value) {
+        startDate = new Date(dateStartInput.value).toISOString();
+      }
+      if (dateEndInput.value) {
+        // Adjust end date to the end of the day
+        const d = new Date(dateEndInput.value);
+        d.setHours(23, 59, 59, 999);
+        endDate = d.toISOString();
+      }
+    } else if (preset === "all") {
+      startDate = null; // No start date filter
+      endDate = null;   // No end date filter
+    }
+
+    return { startDate, endDate };
+  }
+
+  // Handle Preset Change
+  presetSelect.addEventListener("change", (e) => {
+    if (e.target.value === "custom") {
+      customDateGroup.style.display = "flex";
+      // Set default inputs if empty
+      if (!dateStartInput.value || !dateEndInput.value) {
+         const today = new Date().toISOString().split("T")[0];
+         dateStartInput.value = today;
+         dateEndInput.value = today;
+      }
+    } else {
+      customDateGroup.style.display = "none";
+      reloadData();
+    }
+  });
+
+  // Handle Custom Date Change
+  [dateStartInput, dateEndInput].forEach(input => {
+    input.addEventListener("change", () => {
+      if (presetSelect.value === "custom") {
+        reloadData();
+      }
+    });
+  });
+
+  function reloadData() {
+    fetchKPIs();
+    fetchChartData();
+  }
+
   const ctx = document.getElementById("trendChart").getContext("2d");
   let trendChart;
 
@@ -72,44 +144,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 2. Fetch KPIs
   async function fetchKPIs() {
     try {
-      // KPI 1: E-mails Enviados (Total in data_lead)
-      const { count: countSent, error: err1 } = await supabase
-        .from("data_lead")
-        .select("*", { count: "exact", head: true });
+      const { startDate, endDate } = getDateRange();
+      
+      let querySent = supabase.from("data_lead").select("*", { count: "exact", head: true });
+      let queryOpened = supabase.from("data_lead").select("*", { count: "exact", head: true }).eq("mail_tracking_status", "opened");
+      let queryDisparos = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("whatsapp_enviado", true);
+      let queryResponses = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("lead_enviou_mensagem", true);
 
+      // Apply date filters if applicable (Only for 'disparos')
+      if (startDate) {
+        queryDisparos = queryDisparos.gte("created_at", startDate);
+        queryResponses = queryResponses.gte("created_at", startDate);
+      }
+      if (endDate) {
+        queryDisparos = queryDisparos.lte("created_at", endDate);
+        queryResponses = queryResponses.lte("created_at", endDate);
+      }
+
+      // KPI 1: E-mails Enviados
+      const { count: countSent, error: err1 } = await querySent;
+      console.log("Supabase - data_lead Total:", countSent, "Error:", err1);
       if (err1) throw err1;
       animateValue(elSent, 0, countSent || 0, 1500);
 
-      // KPI 2: E-mails Abertos (data_lead where mail_tracking_status = 'opened')
-      const { count: countOpened, error: err2 } = await supabase
-        .from("data_lead")
-        .select("*", { count: "exact", head: true })
-        .eq("mail_tracking_status", "opened");
-
+      // KPI 2: E-mails Abertos
+      const { count: countOpened, error: err2 } = await queryOpened;
+      console.log("Supabase - data_lead Opened:", countOpened, "Error:", err2);
       if (err2) throw err2;
       animateValue(elOpened, 0, countOpened || 0, 1500);
 
-      // KPI 3: Disparos Realizados (disparos where whatsapp_enviado = true)
-      const { count: countDisparos, error: err3 } = await supabase
-        .from("disparos")
-        .select("*", { count: "exact", head: true })
-        .eq("whatsapp_enviado", true);
-
+      // KPI 3: Disparos Realizados
+      const { count: countDisparos, error: err3 } = await queryDisparos;
       if (err3) throw err3;
       animateValue(elDisparos, 0, countDisparos || 0, 1500);
 
-      // KPI 4: Respostas (disparos where lead_enviou_mensagem = true)
-      const { count: countResponses, error: err4 } = await supabase
-        .from("disparos")
-        .select("*", { count: "exact", head: true })
-        .eq("lead_enviou_mensagem", true);
+      // KPI 4: Respostas (Leads)
+      const { count: countResponses, error: err4 } = await queryResponses;
 
       if (err4) throw err4;
       animateValue(elResponses, 0, countResponses || 0, 1500);
     } catch (error) {
       console.error("Error fetching KPIs:", error);
+      // Fallback in case of an error to still render 0 visually but notify console
       [elSent, elOpened, elDisparos, elResponses].forEach(
-        (el) => (el.innerHTML = "Error"),
+        (el) => { if (el.innerHTML === "-") el.innerHTML = "0 (Erro)"; }
       );
     }
   }
@@ -117,23 +195,60 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3. Fetch Chart Data
   async function fetchChartData() {
     try {
-      // We'll get all disparos and group by date for the last 7 days
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const { data, error } = await supabase
+      const { startDate, endDate } = getDateRange();
+      
+      let queryChart = supabase
         .from("disparos")
-        .select("created_at, lead_enviou_mensagem")
-        .gte("created_at", sevenDaysAgo.toISOString());
+        .select("created_at, lead_enviou_mensagem");
 
+      if (startDate) {
+        queryChart = queryChart.gte("created_at", startDate);
+      }
+      if (endDate) {
+        queryChart = queryChart.lte("created_at", endDate);
+      }
+
+      const { data, error } = await queryChart;
       if (error) throw error;
 
       // Process Data: Group by Day
       const dailyData = {};
 
-      // Initialize last 7 days with 0
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
+      // If "All" or "This Month", the range might be large. Let's dynamically establish the last X days based on data length, or fill gaps between min/max date.
+      // For simplicity and keeping the "tendency trend" visual, we will build a map of dates from the data.
+      let numDays = 7;
+      let refDate = new Date();
+      
+      const preset = presetSelect.value;
+      if (preset === "30d") numDays = 30;
+      else if (preset === "thisMonth") numDays = new Date().getDate(); // Days passed this month
+      else if (preset === "custom") {
+         if (startDate && endDate) {
+            const startStr = startDate.split("T")[0];
+            const endStr = endDate.split("T")[0];
+            const diffTime = Math.abs(new Date(endStr) - new Date(startStr));
+            numDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+            refDate = new Date(endStr);
+         } else {
+             numDays = 7;
+         }
+      } else if (preset === "all") {
+          // Find earliest date
+          if (data && data.length > 0) {
+              const earliest = data.reduce((min, p) => p.created_at < min ? p.created_at : min, data[0].created_at);
+              const diffTime = Math.abs(new Date() - new Date(earliest));
+              numDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+          } else {
+              numDays = 7;
+          }
+      }
+
+      // Safeguard against too many points on chart
+      if (numDays > 60) numDays = 60; // Limit to 60 data points maximum for readability
+
+      // Initialize days with 0 based on reference date backwards
+      for (let i = numDays - 1; i >= 0; i--) {
+        const d = new Date(refDate);
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split("T")[0];
         dailyData[dateStr] = { disparos: 0, respostas: 0 };
