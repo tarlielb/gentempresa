@@ -89,10 +89,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (err2) throw err2;
       animateValue(elOpened, 0, countOpened || 0, 1500);
 
-      // KPI 3: Disparos Realizados (Total in disparos)
+      // KPI 3: Disparos Realizados (disparos where whatsapp_enviado = true)
       const { count: countDisparos, error: err3 } = await supabase
         .from("disparos")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .eq("whatsapp_enviado", true);
 
       if (err3) throw err3;
       animateValue(elDisparos, 0, countDisparos || 0, 1500);
