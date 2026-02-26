@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard de Performance - Autta.IA</title>
+    <title>Autta Dash</title>
+    <link rel="icon" type="image/png" href="./fivecon.png" />
     <meta
       name="description"
       content="Dashboard em tempo real de disparos e performance das automações n8n."
@@ -103,10 +104,13 @@
             <span class="kpi-title">E-mails Abertos</span>
             <i class="ph ph-envelope-open"></i>
           </div>
-          <div class="kpi-value" id="kpi-opened">-</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpi-opened">-</span>
+            <span class="kpi-percent" id="kpi-opened-pct">-</span>
+          </div>
           <div class="kpi-trend">
             <i class="ph ph-trend-up"></i>
-            <span>Base: data_lead / opened</span>
+            <span>Taxa de abertura</span>
           </div>
         </div>
 
@@ -129,10 +133,13 @@
             <span class="kpi-title">Respostas (Leads)</span>
             <i class="ph ph-chat-centered-text"></i>
           </div>
-          <div class="kpi-value" id="kpi-responses">-</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpi-responses">-</span>
+            <span class="kpi-percent" id="kpi-responses-pct">-</span>
+          </div>
           <div class="kpi-trend highlight-trend">
             <i class="ph ph-fire"></i>
-            <span>Interações geradas</span>
+            <span>Taxa de conversão</span>
           </div>
         </div>
       </section>

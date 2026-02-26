@@ -49,8 +49,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // DOM Elements
   const elSent = document.getElementById("kpi-sent");
   const elOpened = document.getElementById("kpi-opened");
+  const elOpenedPct = document.getElementById("kpi-opened-pct");
   const elDisparos = document.getElementById("kpi-disparos");
   const elResponses = document.getElementById("kpi-responses");
+  const elResponsesPct = document.getElementById("kpi-responses-pct");
 
   // Filter Elements
   const presetSelect = document.getElementById("date-preset");
@@ -183,6 +185,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (err4) throw err4;
       animateValue(elResponses, 0, countResponses || 0, 1500);
+
+      // Percentages
+      const pctOpened = countSent > 0 ? ((countOpened / countSent) * 100).toFixed(1) : 0;
+      const pctResponses = countDisparos > 0 ? ((countResponses / countDisparos) * 100).toFixed(1) : 0;
+      elOpenedPct.textContent = `${pctOpened}%`;
+      elResponsesPct.textContent = `${pctResponses}%`;
     } catch (error) {
       console.error("Error fetching KPIs:", error);
       // Fallback in case of an error to still render 0 visually but notify console
