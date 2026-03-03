@@ -209,15 +209,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         .from("disparos")
         .select("created_at, lead_enviou_mensagem");
 
+      let queryChartEmails = supabase
+        .from("data_lead")
+        .select("created_at");
+
       if (startDate) {
         queryChart = queryChart.gte("created_at", startDate);
+        queryChartEmails = queryChartEmails.gte("created_at", startDate);
       }
       if (endDate) {
         queryChart = queryChart.lte("created_at", endDate);
+        queryChartEmails = queryChartEmails.lte("created_at", endDate);
       }
 
-      const { data, error } = await queryChart;
+      const [{ data, error }, { data: dataEmails, error: errorEmails }] = await Promise.all([
+        queryChart,
+        queryChartEmails
+      ]);
+      
       if (error) throw error;
+      if (errorEmails) throw errorEmails;
 
       // Process Data: Group by Day
       const dailyData = {};
@@ -259,38 +270,52 @@ document.addEventListener("DOMContentLoaded", async () => {
         const d = new Date(refDate);
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split("T")[0];
-        dailyData[dateStr] = { disparos: 0, respostas: 0 };
+        dailyData[dateStr] = { emails: 0, disparos: 0, respostas: 0 };
       }
 
       // Populate data
-      data.forEach((item) => {
-        if (item.created_at) {
-          const dateStr = item.created_at.split("T")[0];
-          if (dailyData[dateStr]) {
-            dailyData[dateStr].disparos++;
-            if (item.lead_enviou_mensagem) {
-              dailyData[dateStr].respostas++;
+      if (data) {
+        data.forEach((item) => {
+          if (item.created_at) {
+            const dateStr = item.created_at.split("T")[0];
+            if (dailyData[dateStr]) {
+              dailyData[dateStr].disparos++;
+              if (item.lead_enviou_mensagem) {
+                dailyData[dateStr].respostas++;
+              }
             }
           }
-        }
-      });
+        });
+      }
+
+      if (dataEmails) {
+        dataEmails.forEach((item) => {
+          if (item.created_at) {
+            const dateStr = item.created_at.split("T")[0];
+            if (dailyData[dateStr]) {
+              dailyData[dateStr].emails++;
+            }
+          }
+        });
+      }
 
       // Prepare Chart.js arrays
       const labels = Object.keys(dailyData).map((date) => {
         const parts = date.split("-");
         return `${parts[2]}/${parts[1]}`; // DD/MM
       });
+      const dataEmailsList = Object.values(dailyData).map((d) => d.emails);
       const dataDisparos = Object.values(dailyData).map((d) => d.disparos);
       const dataRespostas = Object.values(dailyData).map((d) => d.respostas);
 
-      renderChart(labels, dataDisparos, dataRespostas);
+      renderChart(labels, dataDisparos, dataRespostas, dataEmailsList);
     } catch (error) {
       console.error("Error fetching Chart Data:", error);
     }
   }
 
   // 4. Render Chart
-  function renderChart(labels, disparos, respostas) {
+  function renderChart(labels, disparos, respostas, emails) {
     if (trendChart) {
       trendChart.destroy();
     }
@@ -304,6 +329,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     gradientRespostas.addColorStop(0, "rgba(16, 185, 129, 0.8)");
     gradientRespostas.addColorStop(1, "rgba(16, 185, 129, 0.0)");
 
+    let gradientEmails = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientEmails.addColorStop(0, "rgba(59, 130, 246, 0.8)");
+    gradientEmails.addColorStop(1, "rgba(59, 130, 246, 0.0)");
+
     Chart.defaults.color = "#a0a8cc";
     Chart.defaults.font.family = "'Inter', sans-serif";
 
@@ -312,6 +341,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       data: {
         labels: labels,
         datasets: [
+          {
+            label: "E-mails Enviados",
+            data: emails,
+            borderColor: "#3b82f6",
+            backgroundColor: gradientEmails,
+            borderWidth: 2,
+            pointBackgroundColor: "#3b82f6",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: true,
+            tension: 0.4,
+          },
           {
             label: "Disparos",
             data: disparos,
