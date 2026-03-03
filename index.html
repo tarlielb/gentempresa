@@ -127,19 +127,25 @@
           </div>
         </div>
 
-        <!-- Card 4: Respostas (Leads) -->
+        <!-- Card 4: WhatsApp Status -->
         <div class="glass-card kpi-card">
           <div class="kpi-header">
-            <span class="kpi-title">Respostas (Leads)</span>
-            <i class="ph ph-chat-centered-text"></i>
+            <span class="kpi-title">Status WhatsApp</span>
+            <i class="ph ph-whatsapp-logo"></i>
           </div>
-          <div class="kpi-value-row">
-            <span class="kpi-value" id="kpi-responses">-</span>
-            <span class="kpi-percent" id="kpi-responses-pct">-</span>
+          <div class="whatsapp-stats">
+            <div class="whatsapp-stat">
+              <span class="stat-label">Efetivos:</span>
+              <span class="stat-value success" id="kpi-whatsapp-success">-</span>
+            </div>
+            <div class="whatsapp-stat">
+              <span class="stat-label">Erros:</span>
+              <span class="stat-value error" id="kpi-whatsapp-error">-</span>
+            </div>
           </div>
-          <div class="kpi-trend highlight-trend">
-            <i class="ph ph-fire"></i>
-            <span>Taxa de conversão</span>
+          <div class="kpi-trend">
+            <i class="ph ph-check-circle"></i>
+            <span>Taxa de sucesso: <span id="kpi-whatsapp-pct">-</span></span>
           </div>
         </div>
       </section>
@@ -148,7 +154,7 @@
       <section class="glass-card chart-container">
         <div class="chart-header">
           <h2>Tendência (Últimos 7 dias)</h2>
-          <span class="subtitle">E-mails vs Disparos vs Respostas</span>
+          <span class="subtitle">E-mails Enviados vs E-mails Abertos vs Disparos Realizados</span>
         </div>
         <div class="chart-wrapper">
           <canvas id="trendChart"></canvas>
