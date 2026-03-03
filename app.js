@@ -51,8 +51,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const elOpened = document.getElementById("kpi-opened");
   const elOpenedPct = document.getElementById("kpi-opened-pct");
   const elDisparos = document.getElementById("kpi-disparos");
-  const elResponses = document.getElementById("kpi-responses");
-  const elResponsesPct = document.getElementById("kpi-responses-pct");
+  const elWhatsappSuccess = document.getElementById("kpi-whatsapp-success");
+  const elWhatsappError = document.getElementById("kpi-whatsapp-error");
+  const elWhatsappPct = document.getElementById("kpi-whatsapp-pct");
 
   // Filter Elements
   const presetSelect = document.getElementById("date-preset");
@@ -151,16 +152,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       let querySent = supabase.from("data_lead").select("*", { count: "exact", head: true });
       let queryOpened = supabase.from("data_lead").select("*", { count: "exact", head: true }).eq("mail_tracking_status", "opened");
       let queryDisparos = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("whatsapp_enviado", true);
-      let queryResponses = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("lead_enviou_mensagem", true);
+      let queryWhatsappSuccess = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("whatsapp_enviado", true);
+      let queryWhatsappError = supabase.from("disparos").select("*", { count: "exact", head: true }).eq("whatsapp_enviado", false).not("created_at", "is", null);
 
       // Apply date filters if applicable (Only for 'disparos')
       if (startDate) {
         queryDisparos = queryDisparos.gte("created_at", startDate);
-        queryResponses = queryResponses.gte("created_at", startDate);
+        queryWhatsappSuccess = queryWhatsappSuccess.gte("created_at", startDate);
+        queryWhatsappError = queryWhatsappError.gte("created_at", startDate);
       }
       if (endDate) {
         queryDisparos = queryDisparos.lte("created_at", endDate);
-        queryResponses = queryResponses.lte("created_at", endDate);
+        queryWhatsappSuccess = queryWhatsappSuccess.lte("created_at", endDate);
+        queryWhatsappError = queryWhatsappError.lte("created_at", endDate);
       }
 
       // KPI 1: E-mails Enviados
@@ -180,21 +184,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (err3) throw err3;
       animateValue(elDisparos, 0, countDisparos || 0, 1500);
 
-      // KPI 4: Respostas (Leads)
-      const { count: countResponses, error: err4 } = await queryResponses;
+      // KPI 4: WhatsApp Status
+      const { count: countWhatsappSuccess, error: err4 } = await queryWhatsappSuccess;
+      const { count: countWhatsappError, error: err5 } = await queryWhatsappError;
 
       if (err4) throw err4;
-      animateValue(elResponses, 0, countResponses || 0, 1500);
+      if (err5) throw err5;
+
+      animateValue(elWhatsappSuccess, 0, countWhatsappSuccess || 0, 1500);
+      animateValue(elWhatsappError, 0, countWhatsappError || 0, 1500);
 
       // Percentages
       const pctOpened = countSent > 0 ? ((countOpened / countSent) * 100).toFixed(1) : 0;
-      const pctResponses = countDisparos > 0 ? ((countResponses / countDisparos) * 100).toFixed(1) : 0;
+      const totalWhatsapp = (countWhatsappSuccess || 0) + (countWhatsappError || 0);
+      const pctWhatsappSuccess = totalWhatsapp > 0 ? ((countWhatsappSuccess / totalWhatsapp) * 100).toFixed(1) : 0;
+
       elOpenedPct.textContent = `${pctOpened}%`;
-      elResponsesPct.textContent = `${pctResponses}%`;
+      elWhatsappPct.textContent = `${pctWhatsappSuccess}%`;
     } catch (error) {
       console.error("Error fetching KPIs:", error);
       // Fallback in case of an error to still render 0 visually but notify console
-      [elSent, elOpened, elDisparos, elResponses].forEach(
+      [elSent, elOpened, elDisparos, elWhatsappSuccess, elWhatsappError].forEach(
         (el) => { if (el.innerHTML === "-") el.innerHTML = "0 (Erro)"; }
       );
     }
@@ -207,28 +217,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       let queryChart = supabase
         .from("disparos")
-        .select("created_at, lead_enviou_mensagem");
+        .select("created_at, whatsapp_enviado");
 
       let queryChartEmails = supabase
         .from("data_lead")
         .select("created_at");
 
+      let queryChartEmailsOpened = supabase
+        .from("data_lead")
+        .select("created_at")
+        .eq("mail_tracking_status", "opened");
+
       if (startDate) {
         queryChart = queryChart.gte("created_at", startDate);
         queryChartEmails = queryChartEmails.gte("created_at", startDate);
+        queryChartEmailsOpened = queryChartEmailsOpened.gte("created_at", startDate);
       }
       if (endDate) {
         queryChart = queryChart.lte("created_at", endDate);
         queryChartEmails = queryChartEmails.lte("created_at", endDate);
+        queryChartEmailsOpened = queryChartEmailsOpened.lte("created_at", endDate);
       }
 
-      const [{ data, error }, { data: dataEmails, error: errorEmails }] = await Promise.all([
+      const [{ data, error }, { data: dataEmails, error: errorEmails }, { data: dataEmailsOpened, error: errorEmailsOpened }] = await Promise.all([
         queryChart,
-        queryChartEmails
+        queryChartEmails,
+        queryChartEmailsOpened
       ]);
-      
+
       if (error) throw error;
       if (errorEmails) throw errorEmails;
+      if (errorEmailsOpened) throw errorEmailsOpened;
 
       // Process Data: Group by Day
       const dailyData = {};
@@ -270,13 +289,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const d = new Date(refDate);
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split("T")[0];
-        dailyData[dateStr] = { emails: 0, disparos: 0, respostas: 0 };
+        dailyData[dateStr] = { emails: 0, emailsAbertos: 0, disparos: 0, respostas: 0 };
       }
 
       // Populate data
       if (data) {
         data.forEach((item) => {
-          if (item.created_at) {
+          if (item.created_at && item.whatsapp_enviado) {
             const dateStr = item.created_at.split("T")[0];
             if (dailyData[dateStr]) {
               dailyData[dateStr].disparos++;
@@ -299,39 +318,56 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       }
 
+      if (dataEmailsOpened) {
+        dataEmailsOpened.forEach((item) => {
+          if (item.created_at) {
+            const dateStr = item.created_at.split("T")[0];
+            if (dailyData[dateStr]) {
+              dailyData[dateStr].emailsAbertos++;
+            }
+          }
+        });
+      }
+
       // Prepare Chart.js arrays
       const labels = Object.keys(dailyData).map((date) => {
         const parts = date.split("-");
         return `${parts[2]}/${parts[1]}`; // DD/MM
       });
       const dataEmailsList = Object.values(dailyData).map((d) => d.emails);
+      const dataEmailsAbertosList = Object.values(dailyData).map((d) => d.emailsAbertos);
       const dataDisparos = Object.values(dailyData).map((d) => d.disparos);
       const dataRespostas = Object.values(dailyData).map((d) => d.respostas);
 
-      renderChart(labels, dataDisparos, dataRespostas, dataEmailsList);
+      renderChart(labels, dataEmailsList, dataEmailsAbertosList, dataDisparos, dataRespostas);
     } catch (error) {
       console.error("Error fetching Chart Data:", error);
     }
   }
 
   // 4. Render Chart
-  function renderChart(labels, disparos, respostas, emails) {
+  function renderChart(labels, emails, emailsAbertos, disparos, respostas) {
     if (trendChart) {
       trendChart.destroy();
     }
 
     // Apply a glowing gradient for the primary line
+    let gradientEmails = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientEmails.addColorStop(0, "rgba(59, 130, 246, 0.8)");
+    gradientEmails.addColorStop(1, "rgba(59, 130, 246, 0.0)");
+
+    let gradientEmailsAbertos = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientEmailsAbertos.addColorStop(0, "rgba(16, 185, 129, 0.8)");
+    gradientEmailsAbertos.addColorStop(1, "rgba(16, 185, 129, 0.0)");
+
     let gradientDisparos = ctx.createLinearGradient(0, 0, 0, 400);
     gradientDisparos.addColorStop(0, "rgba(107, 70, 193, 0.8)");
     gradientDisparos.addColorStop(1, "rgba(107, 70, 193, 0.0)");
 
     let gradientRespostas = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientRespostas.addColorStop(0, "rgba(16, 185, 129, 0.8)");
-    gradientRespostas.addColorStop(1, "rgba(16, 185, 129, 0.0)");
+    gradientRespostas.addColorStop(0, "rgba(251, 146, 60, 0.8)");
+    gradientRespostas.addColorStop(1, "rgba(251, 146, 60, 0.0)");
 
-    let gradientEmails = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientEmails.addColorStop(0, "rgba(59, 130, 246, 0.8)");
-    gradientEmails.addColorStop(1, "rgba(59, 130, 246, 0.0)");
 
     Chart.defaults.color = "#a0a8cc";
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -356,26 +392,40 @@ document.addEventListener("DOMContentLoaded", async () => {
             tension: 0.4,
           },
           {
-            label: "Disparos",
+            label: "E-mails Abertos",
+            data: emailsAbertos,
+            borderColor: "#10b981",
+            backgroundColor: gradientEmailsAbertos,
+            borderWidth: 2,
+            pointBackgroundColor: "#10b981",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: true,
+            tension: 0.4,
+          },
+          {
+            label: "Disparos Realizados",
             data: disparos,
             borderColor: "#6b46c1",
             backgroundColor: gradientDisparos,
-            borderWidth: 3,
+            borderWidth: 2,
             pointBackgroundColor: "#6b46c1",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             pointRadius: 4,
             pointHoverRadius: 6,
             fill: true,
-            tension: 0.4, // Smooth curves
+            tension: 0.4,
           },
           {
             label: "Respostas",
             data: respostas,
-            borderColor: "#10b981",
+            borderColor: "#fb923c",
             backgroundColor: gradientRespostas,
             borderWidth: 2,
-            pointBackgroundColor: "#10b981",
+            pointBackgroundColor: "#fb923c",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             pointRadius: 4,
